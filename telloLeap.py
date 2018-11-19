@@ -14,6 +14,8 @@ import pygame
 import pygame.locals
 import Leap, sys, time
 from Leap import CircleGesture, KeyTapGesture, ScreenTapGesture, SwipeGesture
+from datetime import datetime
+
 from subprocess import Popen, PIPE
 
 
@@ -142,7 +144,7 @@ def handler(event, sender, data, **args):
         print('event="%s" data=%s' % (event.getname(), str(data)))
 
 
-def update(old, new, max_delta=0.3):
+def update(old, new, max_delta=0.4):
     if abs(old - new) <= max_delta:
         res = new
     else:
@@ -270,6 +272,14 @@ def printLeapInfo(frame):
     if not (frame.hands.is_empty and frame.gestures().is_empty):
         print ("")
 
+def rot_center(image, angle):
+    """rotate an image while keeping its center and size"""
+    orig_rect = image.get_rect()
+    rot_image = pygame.transform.rotate(image, angle)
+    rot_rect = orig_rect.copy()
+    rot_rect.center = rot_image.get_rect().center
+    rot_image = rot_image.subsurface(rot_rect).copy()
+    return rot_image
 
 def main():
     pygame.init()
@@ -278,7 +288,10 @@ def main():
     screen = pygame.display.set_mode(windowSize)
     font = pygame.font.Font("OpenSans-Regular.ttf", 24)
     LEAPDEADZONE = 0.1
-    leapenable = True
+    leapEnable = False
+    joystickControl = True
+    joystickLastActiveTime =  0
+    joystickDelayTime = 500         #if joystick control activated, wait x ms before return controls to Leap motion
 
 
     buttons = None
@@ -313,6 +326,8 @@ def main():
     # Have the sample listener receive events from the controller
     leapController.add_listener(listener)
 
+    tello_front = pygame.image.load('tello_front.png')
+    tello_side = pygame.image.load('tello_side.png')
 
 
 
@@ -328,7 +343,6 @@ def main():
             # loop with pygame.event.get() is too much tight w/o some sleep
             time.sleep(0.01)
             #time.sleep(0.5)
-            joystickControl = False
 
             for e in pygame.event.get():
 
@@ -341,6 +355,7 @@ def main():
                     # ignore small input values (Deadzone)
                     if -buttons.DEADZONE <= e.value and e.value <= buttons.DEADZONE:
                         e.value = 0.0
+                        joystickControl = False
                     if e.axis == buttons.LEFT_Y:
                         throttle = update(
                             throttle, e.value * buttons.LEFT_Y_REVERSE)
@@ -369,6 +384,7 @@ def main():
                         drone.down(speed)
                     if e.value[1] == 0:
                         drone.up(0)
+                        joystickControl = False
                     if e.value[1] > 0:
                         drone.up(speed)
                 elif e.type == pygame.locals.JOYBUTTONDOWN:
@@ -392,9 +408,9 @@ def main():
                         drone.right(speed)
                     elif e.button == buttons.LEFT:
                         drone.left(speed)
-                elif e.type == pygame.locals.JOYBUTTONUP:
-                    joystickControl = True
 
+                elif e.type == pygame.locals.JOYBUTTONUP:
+                    joystickControl = False
                     if e.button == buttons.TAKEOFF:
                         drone.takeoff()
                     elif e.button == buttons.UP:
@@ -414,9 +430,16 @@ def main():
                     elif e.button == buttons.LEFT:
                         drone.left(0)
                     elif e.button == buttons.AUTODEMO:  # Autonomous flight for demo
-                        print("Auto Demo")
-                        autoDemo(drone)
-
+                        # print("Auto Demo")
+                        # autoDemo(drone)
+                        leapEnable = not leapEnable
+                        if not leapEnable:
+                            roll = 0
+                            pitch = 0
+                            yaw = 0
+                            drone.set_roll(0)
+                            drone.set_pitch(0)
+                            drone.set_yaw(0)
 
                 #handle Keyboard press
                 elif e.type == pygame.locals.KEYDOWN:
@@ -441,11 +464,10 @@ def main():
                     if e.key == pygame.K_RETURN:
                         drone.takeoff()
                     elif e.key == pygame.K_SPACE:
-                        leapenable = not leapenable
+                        leapEnable = not leapEnable
 
                 elif e.type == pygame.locals.KEYUP:
-                    joystickControl = True
-
+                    joystickControl = False
                     if e.key == pygame.K_w:
                         drone.up(0)
                     elif e.key == pygame.K_s:
@@ -468,6 +490,14 @@ def main():
                     drone.quit()
                     exit(1)
                     leapController.remove_listener(listener)
+
+            # currentms = int(round(time.time() * 1000))
+            # if joystickControl:
+            #     print "Joy stick active"
+            #     joystickLastActiveTime = currentms
+
+            if not leapEnable:
+                joystickControl = True
 
 
             frame = leapController.frame()
@@ -494,7 +524,7 @@ def main():
             if abs(handRoll) > 1 or abs(handRoll) < LEAPDEADZONE:
                 handRoll = 0.0
 
-            if leapenable and not joystickControl:
+            if not joystickControl:
                 # if e.axis == buttons.LEFT_Y:
                 #     throttle = update(
                 #         throttle, e.value * buttons.LEFT_Y_REVERSE)
@@ -526,8 +556,16 @@ def main():
             text_hand_yaw = font.render('yaw : ' + str(yaw) , True, (0, 128, 0))
             screen.blit(text_hand_yaw, (20, 80))
 
-            text_leap_enable = font.render("Leap motion enable: "+ str(leapenable), True, (0, 128, 0))
-            screen.blit(text_leap_enable, (20, 100))
+            if joystickControl:
+                activeController = "Joystick"
+            else:
+                activeController = "Leap motion"
+
+            text_active_controller = font.render("Active controller: "+ str(activeController), True, (0, 128, 0))
+            screen.blit(text_active_controller, (20, 100))
+
+            text_leap_enable = font.render("Leap enable: " + str(leapEnable), True, (0, 128, 0))
+            screen.blit(text_leap_enable, (20, 120))
 
 
             #text_drone_info = font.render(str(drone), True, (0, 128, 0))
@@ -535,7 +573,22 @@ def main():
 
 
             text = font.render(str(e), True, (0, 128, 0))
-            screen.blit(text, (20, 120))
+
+            screen.blit(text, (20, 140))
+
+
+
+            try:
+                screen.blit(rot_center(tello_front,roll*90), (50,350))
+                screen.blit(rot_center(tello_side,pitch*90), (400,350))
+
+            except Exception :
+                pass
+
+
+            # screen.blit(rotate(tello_front,[100,100],roll*90), (50, 350))
+
+
             pygame.display.flip()
 
 
