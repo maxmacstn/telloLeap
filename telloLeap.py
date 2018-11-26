@@ -1,3 +1,4 @@
+# coding: utf-8
 """
 tellopy sample using joystick and video palyer
 
@@ -180,7 +181,7 @@ def printLeapInfo(frame):
     finger_names = ['Thumb', 'Index', 'Middle', 'Ring', 'Pinky']
     bone_names = ['Metacarpal', 'Proximal', 'Intermediate', 'Distal']
     state_names = ['STATE_INVALID', 'STATE_START', 'STATE_UPDATE', 'STATE_END']
-    
+
     # Get hands
     for hand in frame.hands:
 
@@ -286,6 +287,7 @@ def main():
     pygame.joystick.init()
     windowSize = width, height = 800, 600
     screen = pygame.display.set_mode(windowSize)
+
     font = pygame.font.Font("OpenSans-Regular.ttf", 24)
     LEAPDEADZONE = 0.1
     leapEnable = False
@@ -343,6 +345,7 @@ def main():
             # loop with pygame.event.get() is too much tight w/o some sleep
             time.sleep(0.01)
             #time.sleep(0.5)
+            screen.fill([45, 45, 45])
 
             for e in pygame.event.get():
 
@@ -539,42 +542,66 @@ def main():
                 drone.set_roll(roll)
             
             # printLeapInfo(frame)
+
+            # colours
+            white = (255, 255, 255)
+            turquoise = (144, 195, 184)
                         
-            screen.fill((255, 255, 255))
+            # background
+            screen.fill((45, 45, 45))
+
+            # decoration
 
 
+            #text_drone_sta = font.render("Drone" + str(drone.state), True, (0, 128, 0))
+            #screen.blit(text_drone_sta, (500, 10))
 
-            text_drone_sta = font.render("Drone" + str(drone.state), True, (0, 128, 0))
-            screen.blit(text_drone_sta, (20, 10))
+            # STATUS
+            pygame.draw.rect(screen, (0, 0, 0), [0, 0, 220, 100])
+            text_drone_sta2 = font.render("STATUS", True, white)
+            screen.blit(text_drone_sta2, (20, 10))
+            text_drone_sta3 = font.render(str(drone.state), True, turquoise)
+            screen.blit(text_drone_sta3, (20, 50))
 
-            text_hand_roll = font.render('roll : ' + str(roll) , True, (0, 128, 0))
-            screen.blit(text_hand_roll, (20, 40))
+            # BATTERY
+            pygame.draw.rect(screen, (0, 0, 0), [580, 0, 800, 100])
+            text_drone_sta4 = font.render("BATTERY", True, white)
+            screen.blit(text_drone_sta4, (600, 10))
+            pygame.draw.rect(screen, turquoise, [600, 50, 20, 30])
+            pygame.draw.rect(screen, turquoise, [630, 50, 20, 30])
+            pygame.draw.rect(screen, turquoise, [660, 50, 20, 30])
+            pygame.draw.rect(screen, turquoise, [690, 50, 20, 30])
+            pygame.draw.rect(screen, turquoise, [720, 50, 20, 30])
+            pygame.draw.rect(screen, turquoise, [750, 50, 20, 30])
 
-            text_hand_pitch = font.render('pitch : ' + str(pitch) , True, (0, 128, 0))
-            screen.blit(text_hand_pitch, (20, 60))
+            text_hand_roll = font.render('ROW' + str(roll) , True, turquoise)
+            screen.blit(text_hand_roll, (20, 140))
 
-            text_hand_yaw = font.render('yaw : ' + str(yaw) , True, (0, 128, 0))
-            screen.blit(text_hand_yaw, (20, 80))
+            text_hand_pitch = font.render('PITCH' + str(pitch) , True, turquoise)
+            screen.blit(text_hand_pitch, (20, 160))
+
+            text_hand_yaw = font.render('YAW' + str(yaw) , True, turquoise)
+            screen.blit(text_hand_yaw, (20, 180))
 
             if joystickControl:
                 activeController = "Joystick"
             else:
                 activeController = "Leap motion"
 
-            text_active_controller = font.render("Active controller: "+ str(activeController), True, (0, 128, 0))
-            screen.blit(text_active_controller, (20, 100))
+            text_active_controller = font.render("Active controller: "+ str(activeController), True, turquoise)
+            screen.blit(text_active_controller, (20, 200))
 
-            text_leap_enable = font.render("Leap enable: " + str(leapEnable), True, (0, 128, 0))
-            screen.blit(text_leap_enable, (20, 120))
+            text_leap_enable = font.render("Leap enable: " + str(leapEnable), True, turquoise)
+            screen.blit(text_leap_enable, (20, 220))
 
 
             #text_drone_info = font.render(str(drone), True, (0, 128, 0))
             #screen.blit(text_drone_sta, (20, 20))
 
 
-            text = font.render(str(e), True, (0, 128, 0))
+            text = font.render(str(e), True, turquoise)
 
-            screen.blit(text, (20, 140))
+            screen.blit(text, (20, 240))
 
 
 
