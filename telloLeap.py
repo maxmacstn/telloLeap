@@ -330,7 +330,7 @@ def main():
 
     tello_front = pygame.image.load('tello_front.png')
     tello_side = pygame.image.load('tello_side.png')
-
+    tello_logo = pygame.image.load('Logo.png')
 
 
 
@@ -339,6 +339,9 @@ def main():
     yaw = 0.0
     pitch = 0.0
     roll = 0.0
+
+    # Blinking Battery Logic
+    count = 0
 
     try:
         while 1:
@@ -458,12 +461,16 @@ def main():
                         drone.counter_clockwise(speed)
                     if e.key == pygame.K_UP:
                         drone.forward(speed)
+                        pitch = 90 /speed - 0.5
                     if e.key == pygame.K_DOWN:
                         drone.backward(speed)
+                        pitch = 90 /speed + 0.5
                     if e.key == pygame.K_LEFT:
                         drone.left(speed)
+                        roll = 90 /speed - 0.5
                     if e.key == pygame.K_RIGHT:
                         drone.right(speed)
+                        roll = 90 /speed + 0.5
                     if e.key == pygame.K_RETURN:
                         drone.takeoff()
                     elif e.key == pygame.K_SPACE:
@@ -481,12 +488,16 @@ def main():
                         drone.counter_clockwise(0)
                     if e.key == pygame.K_UP:
                         drone.forward(0)
+                        pitch = 0
                     if e.key == pygame.K_DOWN:
                         drone.backward(0)
+                        pitch = 0
                     if e.key == pygame.K_LEFT:
                         drone.left(0)
+                        roll = 0
                     if e.key == pygame.K_RIGHT:
                         drone.right(0)
+                        roll = 0
 
 
                 if e.type == pygame.QUIT:
@@ -545,69 +556,110 @@ def main():
 
             # colours
             white = (255, 255, 255)
+            black = (45, 45, 45)
+            
             turquoise = (144, 195, 184)
+
+            green_background = (0, 25, 30)
+            blue_background = (0, 70, 71)
+
+            accent_blue = (43, 236, 232)
+            blue_text = (43, 236, 232)
+
+            purple_text = (229, 130, 234)
                         
             # background
-            screen.fill((45, 45, 45))
+            screen.fill(green_background)
 
             # decoration
-
+            #pygame.draw.line(screen, accent_blue, [0, 100], [800, 100], 5)
 
             #text_drone_sta = font.render("Drone" + str(drone.state), True, (0, 128, 0))
             #screen.blit(text_drone_sta, (500, 10))
 
             # STATUS
-            pygame.draw.rect(screen, (0, 0, 0), [0, 0, 220, 100])
+            pygame.draw.rect(screen, blue_background, [0, 0, 220, 100])
             text_drone_sta2 = font.render("STATUS", True, white)
             screen.blit(text_drone_sta2, (20, 10))
-            text_drone_sta3 = font.render(str(drone.state), True, turquoise)
+            text_drone_sta3 = font.render(str(drone.state), True, blue_text)
             screen.blit(text_drone_sta3, (20, 50))
 
             # BATTERY
-            pygame.draw.rect(screen, (0, 0, 0), [580, 0, 800, 100])
+            pygame.draw.rect(screen, blue_background, [580, 0, 800, 100])
             text_drone_sta4 = font.render("BATTERY", True, white)
             screen.blit(text_drone_sta4, (600, 10))
-            pygame.draw.rect(screen, turquoise, [600, 50, 20, 30])
-            pygame.draw.rect(screen, turquoise, [630, 50, 20, 30])
-            pygame.draw.rect(screen, turquoise, [660, 50, 20, 30])
-            pygame.draw.rect(screen, turquoise, [690, 50, 20, 30])
-            pygame.draw.rect(screen, turquoise, [720, 50, 20, 30])
-            pygame.draw.rect(screen, turquoise, [750, 50, 20, 30])
+            pygame.draw.rect(screen, blue_text, [600, 50, 20, 30])
+            pygame.draw.rect(screen, blue_text, [630, 50, 20, 30])
+            pygame.draw.rect(screen, blue_text, [660, 50, 20, 30])
+            pygame.draw.rect(screen, blue_text, [690, 50, 20, 30])
+            pygame.draw.rect(screen, blue_text, [720, 50, 20, 30])
+            # Blinking Battery
+            count += 1
+            if count % 2 == 0:
+                battery_color = blue_background
+            else:
+                battery_color = blue_text
+            pygame.draw.rect(screen, battery_color, [750, 50, 20, 30])
 
-            text_hand_roll = font.render('ROW' + str(roll) , True, turquoise)
-            screen.blit(text_hand_roll, (20, 140))
+            # ROW (X-AXIS)
+            text_hand_roll = font.render('ROW (X)', True, white)
+            screen.blit(text_hand_roll, (20, 120))
+            if roll == 0:
+                text_hand_roll2 = font.render(str(roll) , True, purple_text)
+            else:
+                text_hand_roll2 = font.render(str(roll), True, blue_text)
+            screen.blit(text_hand_roll2, (20, 150))
 
-            text_hand_pitch = font.render('PITCH' + str(pitch) , True, turquoise)
-            screen.blit(text_hand_pitch, (20, 160))
+            # PITCH (Y-AXIS)
+            text_hand_pitch = font.render('PITCH (Y)', True, white)
+            screen.blit(text_hand_pitch, (20, 190))
+            if pitch == 0:
+                text_hand_pitch2 = font.render(str(pitch) , True, purple_text)
+            else:
+                text_hand_pitch2 = font.render(str(pitch), True, blue_text)
+            screen.blit(text_hand_pitch2, (20, 220))
 
-            text_hand_yaw = font.render('YAW' + str(yaw) , True, turquoise)
-            screen.blit(text_hand_yaw, (20, 180))
+            # YAW (Z-AXIS)
+            text_hand_yaw = font.render('YAW (Z)', True, white)
+            screen.blit(text_hand_yaw, (20, 260))
+            if yaw == 0:
+                text_hand_yaw2 = font.render(str(yaw) , True, purple_text)
+            else:
+                text_hand_yaw2 = font.render(str(yaw), True, blue_text)
+            screen.blit(text_hand_yaw2, (20, 290))
 
+            # ACTIVE CONTROLLER
+            text_active_controller = font.render("CONTROLLER", True, white)
+            screen.blit(text_active_controller, (600, 120))
             if joystickControl:
                 activeController = "Joystick"
             else:
                 activeController = "Leap motion"
+            text_active_controller2 = font.render(str(activeController), True, blue_text)
+            screen.blit(text_active_controller2, (600, 150))
 
-            text_active_controller = font.render("Active controller: "+ str(activeController), True, turquoise)
-            screen.blit(text_active_controller, (20, 200))
-
-            text_leap_enable = font.render("Leap enable: " + str(leapEnable), True, turquoise)
-            screen.blit(text_leap_enable, (20, 220))
-
+            # LEAP ENABLE
+            text_leap_enable = font.render("LEAP ENABLE?", True, white)
+            screen.blit(text_leap_enable, (600, 190))
+            if not leapEnable:
+                text_leap_enable2 = font.render(str(leapEnable) , True, purple_text)
+            else:
+                text_leap_enable2 = font.render(str(leapEnable), True, blue_text)
+            screen.blit(text_leap_enable2, (600, 220))
 
             #text_drone_info = font.render(str(drone), True, (0, 128, 0))
             #screen.blit(text_drone_sta, (20, 20))
 
+            # STATUS
+            text = font.render(str(e), True, white)
+            screen.blit(text, (0, 560))
 
-            text = font.render(str(e), True, turquoise)
-
-            screen.blit(text, (20, 240))
-
-
+            # LOGO
+            screen.blit(tello_logo, (220, 0))
 
             try:
-                screen.blit(rot_center(tello_front,roll*90), (50,350))
-                screen.blit(rot_center(tello_side,pitch*90), (400,350))
+                screen.blit(rot_center(tello_front,roll*90), (50,335))
+                screen.blit(rot_center(tello_side,pitch*90), (440,335))
 
             except Exception :
                 pass
