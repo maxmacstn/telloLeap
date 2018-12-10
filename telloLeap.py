@@ -137,9 +137,9 @@ def handler(event, sender, data, **args):
     global video_player
     drone = sender
     if event is drone.EVENT_FLIGHT_DATA:
-        if prev_flight_data != str(data):
-            print(data)
-            prev_flight_data = str(data)
+        if str(prev_flight_data) != str(data) :
+            prev_flight_data = data
+            print data
 
     else:
         print('event="%s" data=%s' % (event.getname(), str(data)))
@@ -324,11 +324,12 @@ def main():
     #init leap motion controller
     listener = LeapMotionListener()
     leapController = Leap.Controller()
+    leapController.enable_gesture(Leap.Gesture.TYPE_CIRCLE)
 
     # Have the sample listener receive events from the controller
     leapController.add_listener(listener)
 
-    tello_front = pygame.image.load('tello_front.png')
+    tello_back = pygame.image.load('tello_back.png')
     tello_side = pygame.image.load('tello_side.png')
     tello_logo = pygame.image.load('Logo.png')
 
@@ -521,6 +522,36 @@ def main():
             handRoll = hand.palm_normal.roll
 
 
+            # Get gestures
+            for gesture in frame.gestures():
+                state_names = ['STATE_INVALID', 'STATE_START', 'STATE_UPDATE', 'STATE_END']
+                print str(gesture)
+                if gesture.type == Leap.Gesture.TYPE_CIRCLE:
+                    circle = CircleGesture(gesture)
+
+                    # Determine clock direction using the angle between the pointable and the circle normal
+                    if circle.pointable.direction.angle_to(circle.normal) <= Leap.PI / 2:
+                        clockwiseness = "clockwise"
+                    else:
+                        clockwiseness = "counterclockwise"
+
+                    # Calculate the angle swept since the last frame
+                    swept_angle = 0
+                    if circle.state != Leap.Gesture.STATE_START:
+                        previous_update = CircleGesture(leapController.frame(1).gesture(circle.id))
+                        swept_angle = (circle.progress - previous_update.progress) * 2 * Leap.PI
+
+                    print("  Circle id: %d, %s, progress: %f, radius: %f, angle: %f degrees, %s" % (
+                        gesture.id, state_names[gesture.state],
+                        circle.progress, circle.radius, swept_angle * Leap.RAD_TO_DEG, clockwiseness))
+
+                    if circle.progress > 3 and clockwiseness == "clockwise":
+                        drone.flip_right()
+
+                    if circle.progress > 3 and clockwiseness == "counterclockwise":
+                        drone.flip_left()
+
+
             if frame.hands.is_empty:
                 handPitch = 0
                 handYaw = 0
@@ -577,29 +608,49 @@ def main():
             #text_drone_sta = font.render("Drone" + str(drone.state), True, (0, 128, 0))
             #screen.blit(text_drone_sta, (500, 10))
 
+            # Get drone flight data
+            drone_height = 0
+            drone_gnd_spd = 0
+            drone_batt = 0
+
+
+
+
+            if (prev_flight_data is not None):
+                drone_batt = prev_flight_data.battery_percentage
+                drone_height = prev_flight_data.height
+                drone_gnd_spd = prev_flight_data.ground_speed
+
+
             # STATUS
             pygame.draw.rect(screen, blue_background, [0, 0, 220, 100])
-            text_drone_sta2 = font.render("STATUS", True, white)
-            screen.blit(text_drone_sta2, (20, 10))
-            text_drone_sta3 = font.render(str(drone.state), True, blue_text)
-            screen.blit(text_drone_sta3, (20, 50))
-
-            # BATTERY
-            pygame.draw.rect(screen, blue_background, [580, 0, 800, 100])
-            text_drone_sta4 = font.render("BATTERY", True, white)
-            screen.blit(text_drone_sta4, (600, 10))
-            pygame.draw.rect(screen, blue_text, [600, 50, 20, 30])
-            pygame.draw.rect(screen, blue_text, [630, 50, 20, 30])
-            pygame.draw.rect(screen, blue_text, [660, 50, 20, 30])
-            pygame.draw.rect(screen, blue_text, [690, 50, 20, 30])
-            pygame.draw.rect(screen, blue_text, [720, 50, 20, 30])
-            # Blinking Battery
-            count += 1
-            if count % 2 == 0:
-                battery_color = blue_background
+            if prev_flight_data is None or  str(drone.state.name) == "connecting":
+                text_drone_sta2 = font.render("DRONE STATUS", True, white)
+                screen.blit(text_drone_sta2, (20, 10))
+                text_drone_sta3 = font.render(str(drone.state.name), True, blue_text)
+                screen.blit(text_drone_sta3, (20, 50))
             else:
-                battery_color = blue_text
-            pygame.draw.rect(screen, battery_color, [750, 50, 20, 30])
+                screen.blit(font.render("GND SPD: " + str(drone_gnd_spd), True, white), (20, 10))
+                screen.blit(font.render("HEIGHT: " + str(drone_height), True, white), (20, 50))
+
+
+
+
+            pygame.draw.rect(screen, blue_background, [580, 0, 800, 100])
+            text_drone_batt = font.render("BATTERY "+ str(drone_batt) +"%", True, white)
+            screen.blit(text_drone_batt, (600, 10))
+
+            pygame.draw.rect(screen, blue_text, [600, 50, 20, 30])
+            if drone_batt >= 15 :
+                pygame.draw.rect(screen, blue_text, [630, 50, 20, 30])
+            if drone_batt >= 30:
+                pygame.draw.rect(screen, blue_text, [660, 50, 20, 30])
+            if drone_batt >= 45:
+                pygame.draw.rect(screen, blue_text, [690, 50, 20, 30])
+            if drone_batt >= 60:
+                pygame.draw.rect(screen, blue_text, [720, 50, 20, 30])
+            if drone_batt >= 85:
+                pygame.draw.rect(screen, blue_text, [750, 50, 20, 30])
 
             # ROW (X-AXIS)
             text_hand_roll = font.render('ROW (X)', True, white)
@@ -629,23 +680,23 @@ def main():
             screen.blit(text_hand_yaw2, (20, 290))
 
             # ACTIVE CONTROLLER
-            text_active_controller = font.render("CONTROLLER", True, white)
-            screen.blit(text_active_controller, (600, 120))
+            text_active_controller = font.render("ACTIVE CONTROLLER", True, white)
+            screen.blit(text_active_controller, (550, 120))
             if joystickControl:
                 activeController = "Joystick"
             else:
                 activeController = "Leap motion"
             text_active_controller2 = font.render(str(activeController), True, blue_text)
-            screen.blit(text_active_controller2, (600, 150))
+            screen.blit(text_active_controller2, (550, 150))
 
             # LEAP ENABLE
             text_leap_enable = font.render("LEAP ENABLE?", True, white)
-            screen.blit(text_leap_enable, (600, 190))
+            screen.blit(text_leap_enable, (550, 190))
             if not leapEnable:
                 text_leap_enable2 = font.render(str(leapEnable) , True, purple_text)
             else:
                 text_leap_enable2 = font.render(str(leapEnable), True, blue_text)
-            screen.blit(text_leap_enable2, (600, 220))
+            screen.blit(text_leap_enable2, (550, 220))
 
             #text_drone_info = font.render(str(drone), True, (0, 128, 0))
             #screen.blit(text_drone_sta, (20, 20))
@@ -657,10 +708,14 @@ def main():
             # LOGO
             screen.blit(tello_logo, (220, 0))
 
-            try:
-                screen.blit(rot_center(tello_front,roll*90), (50,335))
-                screen.blit(rot_center(tello_side,pitch*90), (440,335))
+            #Rear & Side view
+            screen.blit(font.render("Rear view", True, white), (150, 520))
+            screen.blit(font.render("Side view", True, white), (540, 520))
 
+
+            try:
+                screen.blit(rot_center(tello_back,roll*-70), (50,335))
+                screen.blit(rot_center(tello_side,pitch*70), (440,335))
             except Exception :
                 pass
 
